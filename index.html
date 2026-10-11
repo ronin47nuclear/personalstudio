@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Forja — Dibujo digital</title>
+<style>
+:root{--bg:#171a20;--panel:#222731;--panel2:#2b313d;--line:#3a4250;--text:#f3f5f8;--muted:#b7c0cd;--accent:#e8b86d;--danger:#e87575}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,-apple-system,Segoe UI,sans-serif}
+button,input,select{font:inherit}button{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:10px;padding:9px 11px;cursor:pointer;min-height:38px}button:hover{border-color:var(--accent)}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);color:#201b12;border-color:var(--accent);font-weight:700}.app{height:100%;display:grid;grid-template-rows:auto 1fr auto;min-height:0}
+header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#111319;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{font-weight:800;letter-spacing:.08em;color:var(--accent);margin-right:8px}.brand small{display:block;color:var(--muted);font-size:10px;letter-spacing:.12em}
+.top-actions{display:flex;gap:6px;flex-wrap:wrap}.status{margin-left:auto;color:var(--muted);font-size:12px}
+main{min-height:0;display:grid;grid-template-columns:76px minmax(0,1fr) 260px;gap:10px;padding:10px}
+.tools,.side{background:var(--panel);border:1px solid var(--line);border-radius:14px;min-height:0}
+.tools{padding:7px;display:flex;flex-direction:column;gap:6px;align-items:stretch}.tool{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:7px 3px;min-height:58px;font-size:11px}.tool .ico{font-size:20px}.tool.active{border-color:var(--accent);background:#433a2b}
+.workspace{min-width:0;min-height:0;display:flex;flex-direction:column;gap:8px}.canvas-toolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.canvas-toolbar button{min-height:34px;padding:6px 9px}.stage{flex:1;min-height:180px;position:relative;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:#353943;display:flex;align-items:center;justify-content:center;touch-action:none}
+#paper{position:relative;width:min(100%,900px);height:min(100%,680px);aspect-ratio:4/3;background:white;box-shadow:0 8px 28px #0007;overflow:hidden;transform-origin:center center}
+.layer-canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+#cursorPreview{position:absolute;pointer-events:none;border:1px solid #3339;border-radius:50%;transform:translate(-50%,-50%);display:none;z-index:20}
+.side{padding:12px;overflow:auto;display:flex;flex-direction:column;gap:14px}.section-title{font-weight:750;margin:0 0 8px;font-size:13px;display:flex;justify-content:space-between;align-items:center}.muted{color:var(--muted);font-size:12px}.control{display:flex;flex-direction:column;gap:5px;margin:8px 0}.control label{color:var(--muted);font-size:12px}.control input[type=range]{width:100%;accent-color:var(--accent)}.row{display:flex;gap:6px;align-items:center}.row>*{min-width:0}.row button{flex:1;padding:9px 6px;white-space:nowrap}.brush-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.brush-option{text-align:left;font-size:12px;min-height:56px}.brush-option span{display:block;font-size:22px;line-height:1.2}.brush-option.active{border-color:var(--accent)}
+#color{width:46px;height:38px;border:0;background:none;padding:0}.swatches{display:flex;gap:6px;flex-wrap:wrap}.swatch{width:26px;height:26px;min-height:26px;padding:0;border-radius:50%;border:2px solid #ffffff55}.layer-list{display:flex;flex-direction:column;gap:6px}.layer-item{display:grid;grid-template-columns:42px 1fr auto;gap:7px;align-items:center;padding:6px;border:1px solid var(--line);border-radius:9px;background:#1c2028}.layer-item.selected{border-color:var(--accent)}.thumb{width:40px;height:34px;background:white;border-radius:4px;border:1px solid #ffffff44;object-fit:contain}.layer-name{width:100%;background:transparent;border:0;color:var(--text);padding:3px;min-height:28px}.layer-actions{display:flex;gap:3px}.layer-actions button{padding:4px 6px;min-height:28px;font-size:12px}
+footer{padding:7px 14px;border-top:1px solid var(--line);background:#111319;color:var(--muted);display:flex;justify-content:space-between;gap:10px;font-size:11px}
+dialog{border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--text);max-width:min(92vw,440px);width:440px;padding:20px;box-shadow:0 20px 80px #0009}dialog::backdrop{background:#0009}dialog h2{margin-top:0}.dialog-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+@media(max-width:850px){main{grid-template-columns:60px minmax(0,1fr);grid-template-rows:minmax(250px,1fr) auto}.tools{grid-row:1 / span 2}.side{grid-column:2;max-height:34vh;display:grid;grid-template-columns:1fr 1fr;align-content:start}.workspace{min-height:300px}.status{width:100%;margin-left:0}}
+@media(max-width:520px){header{padding:8px}.brand{width:100%}.status{display:none}main{padding:6px;gap:6px;grid-template-columns:52px minmax(0,1fr);grid-template-rows:minmax(250px,1fr) auto}.tools{padding:4px}.tool{min-height:49px;font-size:10px}.tool .ico{font-size:18px}.side{padding:9px;grid-template-columns:1fr;max-height:36vh}.top-actions button{padding:7px 9px;min-height:34px}.stage{min-height:250px}footer span:last-child{display:none}}
+
+#cursorPreview{position:absolute;box-shadow:0 0 0 1px #fffa;border-color:#000b}
+select,input[type=text]{background:#171a20;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;width:100%}
+.chips{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}.chip{min-height:28px;padding:3px 10px;font-size:12px;border-radius:99px}.chip.active{border-color:var(--accent);background:#433a2b}
+.brush-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto;margin-bottom:8px;padding-right:2px}
+.brush-card{display:block;flex-shrink:0;text-align:left;padding:6px 8px}.brush-card.active{border-color:var(--accent);background:#433a2b}.brush-card b{font-size:12px}.brush-card small{color:var(--muted);margin-left:6px;font-size:11px}.brush-card canvas{display:block;width:100%;height:44px;background:#efe9dd;border-radius:6px;margin-top:4px}
+#testPad{width:100%;height:110px;background:#fff;border-radius:8px;touch-action:none;display:block;margin:6px 0}
+details summary{cursor:pointer;color:var(--muted);font-size:12px;margin:6px 0}
+#brushDialog{width:min(92vw,520px);max-height:92vh;overflow:auto}#brushPreview{width:100%;height:80px;background:#efe9dd;border-radius:10px;display:block}
+.check{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:12px;margin:8px 0}.check input{width:auto}
+button.danger{border-color:var(--danger);color:var(--danger)}
+
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand">FORJA <small>ESTUDIO DE DIBUJO</small></div>
+  <div class="top-actions">
+    <button id="newBtn" class="primary">＋ Nuevo</button><button id="sparkBtn">✦ Chispa creativa</button><button id="openBtn">Abrir</button><button id="saveBtn">Guardar</button><button id="exportBtn">Exportar PNG</button>
+    <button id="undoBtn" title="Deshacer (Ctrl+Z)">↶</button><button id="redoBtn" title="Rehacer (Ctrl+Y)">↷</button>
+  </div>
+  <div class="status" id="saveStatus" aria-live="polite">Listo · Guardado local</div>
+  <input id="fileOpen" type="file" accept=".forja,.json,image/png,image/jpeg" hidden>
+</header>
+<main>
+  <nav class="tools" aria-label="Herramientas">
+    <button class="tool active" data-tool="brush" title="Pincel"><span class="ico">✎</span>Pincel</button>
+    <button class="tool" data-tool="eraser" title="Goma de borrar"><span class="ico">◩</span>Goma</button>
+    <button class="tool" data-tool="fill" title="Relleno"><span class="ico">▧</span>Relleno</button>
+    <button class="tool" data-tool="eyedropper" title="Tomar color"><span class="ico">◉</span>Color</button>
+    <button class="tool" id="layersFocus" title="Ir a capas"><span class="ico">▤</span>Capas</button>
+    <button class="tool" id="helpBtn" title="Ayuda contextual"><span class="ico">?</span>Ayuda</button>
+  </nav>
+  <section class="workspace">
+    <div class="canvas-toolbar">
+      <button id="zoomOut">−</button><span id="zoomLabel" class="muted">100%</span><button id="zoomIn">＋</button><button id="fitBtn">Ver todo</button>
+      <button id="rotateBtn">Girar vista ↻</button><button id="gridBtn">Cuadrícula</button><button id="symBtn">Simetría</button>
+    </div>
+    <div class="stage" id="stage">
+      <div id="paper" aria-label="Lienzo de dibujo"></div>
+      <div id="cursorPreview"></div>
+    </div>
+  </section>
+  <aside class="side">
+    <section>
+      <h3 class="section-title">Pinceles <span class="muted">elige por sensación</span></h3>
+      <div class="chips" id="brushCats"></div>
+      <div class="brush-list" id="brushList"></div>
+      <div class="row"><button id="newBrushBtn" title="Crear un pincel desde cero">＋ Crear</button><button id="editBrushBtn" title="Editar o copiar el pincel elegido">Editar</button><button id="importBrushBtn" title="Importar una imagen como punta, o un archivo .forjabrush">⇪ Importar</button></div>
+      <input id="brushFile" type="file" accept=".forjabrush,.json,.abr,image/*" multiple hidden>
+      <div class="control"><label for="size">Tamaño del trazo <strong id="sizeValue">8</strong></label><input id="size" type="range" min="1" max="60" value="8"></div>
+      <div class="control"><label for="opacity">Opacidad <strong id="opacityValue">100%</strong></label><input id="opacity" type="range" min="5" max="100" value="100"></div>
+      <details id="padWrap"><summary>Zona de prueba (no toca tu dibujo)</summary><canvas id="testPad" width="480" height="220"></canvas><button id="padClear">Limpiar prueba</button></details>
+      <div class="row"><button id="testBrush">Probar pincel</button><button id="advancedBtn">Ajustes avanzados</button></div>
+    </section>
+    <section>
+      <h3 class="section-title">Color</h3>
+      <div class="row"><input id="color" type="color" value="#27364b" aria-label="Color actual"><div><strong id="colorName">Azul noche</strong><div class="muted">Tu color actual</div></div></div>
+      <div class="swatches" id="swatches"></div>
+      <div class="control"><label for="recentColors">Colores recientes</label><div class="swatches" id="recentColors"></div></div>
+    </section>
+    <section id="layersSection">
+      <h3 class="section-title">Capas <button id="addLayer">＋ Añadir</button></h3>
+      <p class="muted">Como hojas transparentes: dibuja en una sin estropear las otras.</p>
+      <div class="layer-list" id="layerList"></div>
+      <div class="row"><button id="layerUp">↑ Subir</button><button id="layerDown">↓ Bajar</button></div>
+      <div class="row"><button id="toggleLayer">Mostrar/ocultar</button><button id="renameLayer">Renombrar</button></div>
+      <div class="row"><button id="deleteLayer">Eliminar</button><button id="duplicateLayer">Duplicar</button></div>
+      <div class="control"><label for="layerOpacity">Opacidad de capa <strong id="layerOpacityValue">100%</strong></label><input id="layerOpacity" type="range" min="0" max="100" value="100"></div>
+    </section>
+  </aside>
+</main>
+<footer><span>Tu estudio · Sin cuenta ni puntuaciones</span><span>Ctrl+Z deshace · La inspiración es opcional</span></footer>
+</div>
+<dialog id="messageDialog"><h2 id="dialogTitle">Un pequeño consejo</h2><p id="dialogText"></p><div class="dialog-actions"><button id="dialogCancel">Cerrar</button><button id="dialogOK" class="primary">Entendido</button></div></dialog>
+<dialog id="newDialog"><h2>Crear un dibujo</h2><p class="muted">Puedes empezar con una hoja en blanco. El tamaño se puede cambiar en una versión futura.</p><div class="control"><label for="projectName">Nombre del dibujo</label><input id="projectName" value="Mi dibujo" style="width:100%;padding:10px;background:#171a20;color:white;border:1px solid var(--line);border-radius:8px"></div><div class="dialog-actions"><button id="newCancel">Cancelar</button><button id="newConfirm" class="primary">Crear lienzo</button></div></dialog>
+<dialog id="sparkDialog"><h2>Una chispa, no una tarea</h2>
+<p class="muted">Ideas opcionales para cuando te apetezca probar algo distinto. No hay puntos, plazos ni respuestas correctas.</p>
+<div id="sparkCard" style="padding:14px;border:1px solid var(--line);border-radius:12px;background:#1b2028;margin:12px 0">
+<div class="muted" id="sparkCategory">Experimento creativo</div>
+<h3 id="sparkTitle" style="margin:8px 0;color:var(--accent)">Dibuja algo que solo exista en tu imaginación</h3>
+<p id="sparkDesc" style="margin-bottom:0">Prueba una forma, textura o combinación de colores que nunca hayas usado. Puedes cambiar la idea o ignorarla por completo.</p>
+</div>
+<div class="row"><button id="anotherSpark">Otra idea ↻</button><button id="useSpark" class="primary">Empezar un dibujo</button></div>
+<div class="dialog-actions"><button id="sparkClose">Volver al dibujo</button></div>
+</dialog>
+<dialog id="advancedDialog"><h2>Ajustes avanzados</h2><p>Estos controles son opcionales. Cambian la sensación del trazo, no tu habilidad.</p><div class="control"><label for="stabilizer">Suavizar el trazo <strong id="stabilizerValue">0%</strong></label><input id="stabilizer" type="range" min="0" max="80" value="0"></div><p class="muted">Un valor alto puede hacer que el trazo responda con algo de retraso. Puedes volver a cero cuando quieras.</p><div class="dialog-actions"><button id="advancedClose" class="primary">Listo</button></div></dialog>
+<dialog id="brushDialog"><h2 id="brushDlgTitle">Crear pincel</h2>
+<canvas id="brushPreview" width="480" height="110"></canvas>
+<div class="control"><label for="bName">Nombre</label><input type="text" id="bName" maxlength="40"></div>
+<div class="control"><label for="bShape">Forma de la punta <span class="muted">(brush tip)</span></label><select id="bShape"><option value="round">Redonda</option><option value="square">Cuadrada</option><option value="star">Estrella</option><option value="image">Desde una imagen</option></select></div>
+<div id="bImageBox" hidden>
+<div class="row"><button id="bPickImage">Elegir imagen…</button><button id="bFromLayer">Usar mi capa actual</button></div>
+<input type="file" id="bImgFile" accept="image/*" hidden>
+<label class="check"><input type="checkbox" id="bInvert"> Invertir (marca si la forma es blanca sobre fondo negro)</label>
+<p class="muted" id="bMsg">Una imagen con transparencia usa su forma. Una imagen sin transparencia usa lo oscuro como tinta y lo claro como vacío.</p>
+</div>
+<div id="bBasic"></div>
+<details><summary>Ajustes avanzados</summary><div id="bAdv"></div></details>
+<div class="dialog-actions"><button id="bDelete" class="danger">Eliminar</button><button id="bExport">Exportar</button><button id="bCancel">Cancelar</button><button id="bSave" class="primary">Guardar pincel</button></div>
+</dialog>
+<script>
+(() => {
+const W=1200,H=900, paper=document.getElementById('paper'), stage=document.getElementById('stage');
+let layers=[], selected=0, tool='brush', brush='pencil', color='#27364b', size=8, opacity=1, zoom=1, rotation=0, grid=false, symmetry=false, drawing=false, last=null, history=[], future=[], stabilizer=0, projectName='Mi dibujo', recent=['#27364b','#d85b4b','#f2c14e','#4b8f72','#faf3dd'];
+const $=id=>document.getElementById(id);
+function makeLayer(name){const c=document.createElement('canvas');c.width=W;c.height=H;c.className='layer-canvas';c.style.width='100%';c.style.height='100%';paper.appendChild(c);return {name,canvas:c,visible:true,opacity:1,ctx:c.getContext('2d',{willReadFrequently:true})};}
+function init(){layers=[makeLayer('Boceto')];selected=0;renderLayers();fitPaper();snapshot();setStatus('Listo · Guardado local');}
+function setStatus(s){$('saveStatus').textContent=s}
+function active(){return layers[selected]}
+function fitPaper(){const maxW=stage.clientWidth-20,maxH=stage.clientHeight-20;let ratio=Math.min(maxW/W,maxH/H);paper.style.width=(W*ratio)+'px';paper.style.height=(H*ratio)+'px';paper.style.transform=`scale(${zoom}) rotate(${rotation}deg)`;$('zoomLabel').textContent=Math.round(zoom*100)+'%';}
+function renderLayers(){strokeCv.style.zIndex=selected*2+1;layers.forEach((l,i)=>{l.canvas.style.display=l.visible?'block':'none';l.canvas.style.zIndex=i*2; l.canvas.style.opacity=l.opacity});$('layerList').innerHTML='';layers.forEach((l,i)=>{const item=document.createElement('div');item.className='layer-item'+(i===selected?' selected':'');const thumb=document.createElement('canvas');thumb.className='thumb';thumb.width=80;thumb.height=68;thumb.getContext('2d').fillStyle='#fff';thumb.getContext('2d').fillRect(0,0,80,68);thumb.getContext('2d').drawImage(l.canvas,0,0,80,68);const name=document.createElement('input');name.className='layer-name';name.value=l.name;name.setAttribute('aria-label','Nombre de capa');name.onchange=()=>{l.name=name.value||'Capa';renderLayers()};const acts=document.createElement('div');acts.className='layer-actions';const pick=document.createElement('button');pick.textContent='✎';pick.title='Seleccionar capa';pick.onclick=()=>{selected=i;syncLayerOpacity();renderLayers()};const vis=document.createElement('button');vis.textContent=l.visible?'◉':'○';vis.title=l.visible?'Ocultar capa':'Mostrar capa';vis.onclick=()=>{l.visible=!l.visible;renderLayers()};acts.append(pick,vis);item.append(thumb,name,acts);item.onclick=e=>{if(e.target===item||e.target===thumb){selected=i;syncLayerOpacity();renderLayers()}};$('layerList').append(item)});syncLayerOpacity();}
+function syncLayerOpacity(){$('layerOpacity').value=Math.round(active().opacity*100);$('layerOpacityValue').textContent=$('layerOpacity').value+'%'}
+function pressureOf(e){return e.pointerType==='pen'?Math.max(.05,e.pressure||.5):1}
+function coords(e){const r=paper.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,a=-rotation*Math.PI/180,dx=e.clientX-cx,dy=e.clientY-cy,rx=dx*Math.cos(a)-dy*Math.sin(a),ry=dx*Math.sin(a)+dy*Math.cos(a);return {x:(rx/(paper.offsetWidth*zoom)+.5)*W,y:(ry/(paper.offsetHeight*zoom)+.5)*H,p:pressureOf(e)}}
+/* ===== Pinceles: motor de sellos (punta + espaciado + dispersión + grano) ===== */
+const TIP=256,TMP=640,sat=v=>v<0?0:v>1?1:v;
+const BASE={name:'Pincel',desc:'',cat:'Dibujo',shape:'round',hardness:.8,roundness:1,grain:0,tipSrc:null,tipInvert:false,spacing:.1,flow:1,maxAlpha:1,scatter:0,sizeJitter:0,angleJitter:0,angle:0,follow:false,pSize:0,pFlow:0,sm:1};
+const mk=(id,o)=>({...BASE,id,...o});
+const builtin=[
+mk('pencil',{name:'Lápiz mina',desc:'Fino, con grano de papel',hardness:.75,spacing:.07,flow:.55,grain:.6,pSize:.3,pFlow:.7,sm:.8}),
+mk('color',{name:'Lápiz de color',desc:'Suave y acumulable',hardness:.6,spacing:.07,flow:.45,grain:.7,pFlow:.6,sm:1.1}),
+mk('ink',{name:'Tinta',desc:'Línea limpia; la presión cambia el grosor',hardness:1,spacing:.05,flow:1,pSize:.85,sm:.8}),
+mk('calli',{name:'Plumilla plana',desc:'Punta achatada a 45°',hardness:1,roundness:.25,angle:45,spacing:.04,pSize:.3,sm:1.2}),
+mk('charcoal',{name:'Carboncillo',desc:'Trazo áspero',hardness:.5,spacing:.08,flow:.5,grain:.95,angleJitter:180,scatter:.05,pSize:.2,pFlow:.6,sm:1.4}),
+mk('marker',{name:'Marcador',desc:'Color parejo y translúcido',cat:'Pintura',hardness:.95,spacing:.05,maxAlpha:.6,sm:1.5}),
+mk('water',{name:'Acuarela suave',desc:'Capas transparentes',cat:'Pintura',hardness:.15,spacing:.08,flow:.14,grain:.25,pFlow:.5,sm:1.8}),
+mk('air',{name:'Aerógrafo',desc:'Brumas y degradados',cat:'Pintura',hardness:0,spacing:.05,flow:.08,pFlow:.4,sm:3}),
+mk('stars',{name:'Estrellas',desc:'Esparce estrellitas',cat:'Efectos',shape:'star',hardness:1,spacing:1.3,scatter:.9,sizeJitter:.6,angleJitter:180,sm:.9}),
+mk('squares',{name:'Confeti',desc:'Cuadraditos al azar',cat:'Efectos',shape:'square',hardness:1,spacing:1.6,scatter:1.2,sizeJitter:.7,angleJitter:90,sm:.6})
+];
+const ERASER=mk('eraser',{hardness:.9,spacing:.05});
+let custom=[];const imgCache=new Map(),maskCache=new Map(),tintCache=new Map(),patCache=new Map();
+const getBrush=id=>builtin.concat(custom).find(b=>b.id===id)||builtin[0];
+const strHash=s=>{let h=0;for(let i=0;i<s.length;i+=7)h=(h*31+s.charCodeAt(i))|0;return h+':'+s.length};
+const cap=(m,n)=>{while(m.size>n)m.delete(m.keys().next().value)};
+const mkCanvas=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
+function ensureTip(b){return new Promise(res=>{if(b.shape!=='image'||!b.tipSrc||imgCache.has(b.tipSrc))return res();const im=new Image();im.onload=()=>{imgCache.set(b.tipSrc,im);res()};im.onerror=()=>res();im.src=b.tipSrc})}
+const maskKey=b=>[b.shape,b.hardness,b.roundness,b.tipInvert,b.tipSrc?strHash(b.tipSrc):''].join('|');
+function buildMask(b){
+  const c=mkCanvas(TIP,TIP),x=c.getContext('2d'),out=x.createImageData(TIP,TIP),o=out.data;
+  if(b.shape==='image'){
+    const im=imgCache.get(b.tipSrc);if(!im)return null;
+    const s=Math.min(TIP/im.width,TIP/im.height),w=Math.max(1,Math.round(im.width*s)),h=Math.max(1,Math.round(im.height*s));
+    const src=mkCanvas(w,h),sx=src.getContext('2d',{willReadFrequently:true});sx.drawImage(im,0,0,w,h);
+    const sd=sx.getImageData(0,0,w,h).data;let hasAlpha=false;for(let i=3;i<sd.length;i+=4)if(sd[i]<250){hasAlpha=true;break}
+    const t=mkCanvas(TIP,TIP),tx=t.getContext('2d',{willReadFrequently:true});
+    if(!hasAlpha){tx.fillStyle=b.tipInvert?'#000':'#fff';tx.fillRect(0,0,TIP,TIP)}
+    tx.drawImage(src,Math.round((TIP-w)/2),Math.round((TIP-h)/2));
+    const p=tx.getImageData(0,0,TIP,TIP).data;
+    for(let i=0;i<p.length;i+=4){const lum=(.299*p[i]+.587*p[i+1]+.114*p[i+2])/255;const a=hasAlpha?p[i+3]/255:(b.tipInvert?lum:1-lum);o[i]=o[i+1]=o[i+2]=255;o[i+3]=Math.round(sat(a)*255)}
+  }else{
+    const R=Math.max(b.roundness,.05),h=Math.min(b.hardness,.98);
+    for(let py=0;py<TIP;py++)for(let px=0;px<TIP;px++){
+      const nx=(px+.5)/TIP*2-1,ny=((py+.5)/TIP*2-1)/R;let cov;
+      if(b.shape==='star'){const th=Math.atan2(ny,nx),u=(((th*5/(2*Math.PI))%1)+1)%1,Rt=.4+.6*Math.abs(2*u-1);cov=sat((Rt-Math.hypot(nx,ny))/(.03+(1-h)*.5))}
+      else{const r=b.shape==='square'?Math.max(Math.abs(nx),Math.abs(ny)):Math.hypot(nx,ny);cov=r<=h?1:sat((1-r)/Math.max(1-h,.03))}
+      const i=(py*TIP+px)*4;o[i]=o[i+1]=o[i+2]=255;o[i+3]=Math.round(cov*255)}
+  }
+  x.putImageData(out,0,0);return c}
+function getMask(b){const k=maskKey(b);if(maskCache.has(k))return maskCache.get(k);const m=buildMask(b);if(m){maskCache.set(k,m);cap(maskCache,24)}return m}
+function getTinted(b,mask,col){const k=maskKey(b)+col;if(tintCache.has(k))return tintCache.get(k);const c=mkCanvas(TIP,TIP),x=c.getContext('2d');x.fillStyle=col;x.fillRect(0,0,TIP,TIP);x.globalCompositeOperation='destination-in';x.drawImage(mask,0,0);tintCache.set(k,c);cap(tintCache,16);return c}
+/* grano de papel: textura fija al lienzo, no a cada sello */
+let grainVals=null;
+function vnoise(n){const g=Array.from({length:n*n},()=>Math.random()),out=new Float32Array(TIP*TIP);for(let y=0;y<TIP;y++)for(let x=0;x<TIP;x++){const fx=x/TIP*n,fy=y/TIP*n,ix=Math.floor(fx),iy=Math.floor(fy),tx=fx-ix,ty=fy-iy,sx=tx*tx*(3-2*tx),sy=ty*ty*(3-2*ty),a=g[(iy%n)*n+ix%n],b=g[(iy%n)*n+(ix+1)%n],c=g[((iy+1)%n)*n+ix%n],d=g[((iy+1)%n)*n+(ix+1)%n];out[y*TIP+x]=a+(b-a)*sx+(c-a)*sy+(a-b-c+d)*sx*sy}return out}
+function grainPattern(g){g=Math.round(g*20)/20;if(g<=0)return null;if(patCache.has(g))return patCache.get(g);
+  if(!grainVals){const a=vnoise(48),b=vnoise(96);grainVals=new Float32Array(TIP*TIP);for(let i=0;i<grainVals.length;i++)grainVals[i]=sat((a[i]*.5+b[i]*.3+Math.random()*.2-.5)*2.6+.5)}
+  const c=mkCanvas(TIP,TIP),x=c.getContext('2d'),im=x.createImageData(TIP,TIP);for(let i=0;i<grainVals.length;i++){im.data[i*4]=im.data[i*4+1]=im.data[i*4+2]=255;im.data[i*4+3]=Math.round(255*(1-g+g*grainVals[i]))}
+  x.putImageData(im,0,0);const p=x.createPattern(c,'repeat');patCache.set(g,p);return p}
+const tmp=mkCanvas(TMP,TMP),tctx=tmp.getContext('2d');
+function makeStroker(b,o){
+  const mask=getMask(b);if(!mask)return {add(){}};
+  const tint=o.erase?mask:getTinted(b,mask,o.color),pat=b.grain>0?grainPattern(b.grain):null,ctx=o.ctx;
+  const diam=p=>o.size*b.sm*(1-b.pSize+b.pSize*p);let prev=null,carry=0;
+  function put(x,y,d,ang,a,flip){
+    const D=Math.ceil(d*1.5)+2,op=o.erase?'destination-out':'source-over';
+    if(!pat||D>TMP){ctx.save();ctx.globalCompositeOperation=op;ctx.globalAlpha=a;ctx.translate(x,y);if(flip)ctx.scale(-1,1);ctx.rotate(ang*Math.PI/180);ctx.drawImage(tint,-d/2,-d/2,d,d);ctx.restore();return}
+    tctx.clearRect(0,0,D,D);tctx.save();tctx.translate(D/2,D/2);if(flip)tctx.scale(-1,1);tctx.rotate(ang*Math.PI/180);tctx.drawImage(tint,-d/2,-d/2,d,d);tctx.restore();
+    tctx.save();tctx.globalCompositeOperation='destination-in';tctx.translate(-(x-D/2),-(y-D/2));tctx.fillStyle=pat;tctx.fillRect(x-D/2,y-D/2,D,D);tctx.restore();
+    ctx.save();ctx.globalCompositeOperation=op;ctx.globalAlpha=a;ctx.drawImage(tmp,0,0,D,D,x-D/2,y-D/2,D,D);ctx.restore()}
+  function stamp(x,y,p,dir){
+    let d=diam(p);if(b.sizeJitter)d*=1-b.sizeJitter*Math.random()*.8;if(d<.4)return;
+    if(b.scatter){const r=b.scatter*d;x+=(Math.random()-.5)*2*r;y+=(Math.random()-.5)*2*r}
+    const ang=b.angle+(b.follow?dir:0)+(b.angleJitter?(Math.random()-.5)*2*b.angleJitter:0),a=Math.min(1,b.flow*(1-b.pFlow+b.pFlow*p))*o.alphaMul;
+    put(x,y,d,ang,a,false);if(o.mirror)put(o.mirror-x,y,d,ang,a,true)}
+  return {add(pt){
+    if(!prev){stamp(pt.x,pt.y,pt.p,0);prev=pt;return}
+    const dx=pt.x-prev.x,dy=pt.y-prev.y,dist=Math.hypot(dx,dy);if(dist<.01)return;
+    const dir=Math.atan2(dy,dx)*180/Math.PI,step=Math.max(.7,b.spacing*diam((prev.p+pt.p)/2));let t=step-carry;
+    while(t<=dist){const f=t/dist;stamp(prev.x+dx*f,prev.y+dy*f,prev.p+(pt.p-prev.p)*f,dir);t+=step}
+    carry=dist-(t-step);prev=pt}}}
+function drawPreview(cv,b,o={}){const x=cv.getContext('2d'),w=cv.width,h=cv.height;x.clearRect(0,0,w,h);const s=makeStroker(b,{ctx:x,color:o.color||'#1f2a3a',size:o.size||h*.16,alphaMul:b.maxAlpha,erase:false,mirror:0}),n=60;for(let i=0;i<=n;i++){const t=i/n;s.add({x:w*.07+w*.86*t,y:h/2+Math.sin(t*Math.PI*2)*h*.22,p:.25+.75*Math.sin(t*Math.PI)})}}
+/* ===== Trazo sobre el lienzo ===== */
+const strokeCv=mkCanvas(W,H),bufCtx=strokeCv.getContext('2d');strokeCv.className='layer-canvas';strokeCv.style.pointerEvents='none';strokeCv.style.opacity=0;paper.appendChild(strokeCv);
+let stroker=null,strokeCur=null,rawLast=null,smooth=null;
+function start(e){
+  if(e.button!==undefined&&e.button!==0)return;if(e.pointerType==='touch'&&e.isPrimary===false)return;
+  if(tool==='fill'){fillAt(e);return}if(tool==='eyedropper'){pickColor(e);return}
+  const l=active();if(!l.visible){setStatus('Esta capa está oculta: muéstrala para dibujar en ella');return}
+  const erase=tool==='eraser',b=erase?ERASER:getBrush(brush);
+  drawing=true;paper.setPointerCapture?.(e.pointerId);strokeCur={b,erase};
+  strokeCv.style.opacity=erase?0:opacity*b.maxAlpha*l.opacity;
+  stroker=makeStroker(b,{ctx:erase?l.ctx:bufCtx,color,size,alphaMul:erase?opacity:1,erase,mirror:symmetry?W:0});
+  rawLast=coords(e);smooth=rawLast;stroker.add(rawLast);setStatus('Dibujando…')}
+function move(e){if(!drawing)return;const k=stabilizer>0?Math.min(.95,stabilizer/80*.9):0,evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];
+  for(const ev of (evs.length?evs:[e])){rawLast=coords(ev);smooth=k?{x:smooth.x+(rawLast.x-smooth.x)*(1-k),y:smooth.y+(rawLast.y-smooth.y)*(1-k),p:rawLast.p}:rawLast;stroker.add(smooth)}}
+function end(){if(!drawing)return;drawing=false;if(stabilizer>0&&rawLast)stroker.add(rawLast);const l=active();
+  if(!strokeCur.erase){l.ctx.save();l.ctx.globalAlpha=opacity*strokeCur.b.maxAlpha;l.ctx.drawImage(strokeCv,0,0);l.ctx.restore();bufCtx.clearRect(0,0,W,H)}
+  stroker=null;strokeCv.style.opacity=0;snapshot();setStatus('Cambios sin guardar')}
+paper.addEventListener('pointerdown',start);paper.addEventListener('pointermove',move);paper.addEventListener('pointerup',end);paper.addEventListener('pointercancel',end);paper.addEventListener('pointerleave',()=>{if(drawing)end()});
+const cursor=$('cursorPreview');
+stage.addEventListener('pointermove',e=>{if(tool==='fill'||tool==='eyedropper'||e.pointerType==='touch'){cursor.style.display='none';return}const r=stage.getBoundingClientRect(),b=tool==='eraser'?ERASER:getBrush(brush),d=Math.max(6,size*b.sm*paper.offsetWidth*zoom/W);cursor.style.width=cursor.style.height=d+'px';cursor.style.left=(e.clientX-r.left)+'px';cursor.style.top=(e.clientY-r.top)+'px';cursor.style.display='block'});
+stage.addEventListener('pointerleave',()=>{cursor.style.display='none'});
+function snapshot(){try{history.push(layers.map(l=>({name:l.name,visible:l.visible,opacity:l.opacity,data:l.canvas.toDataURL()})));if(history.length>25)history.shift();future=[];}catch(e){}}
+function restoreState(state){layers.forEach(l=>l.canvas.remove());layers=state.map(s=>{const l=makeLayer(s.name);l.visible=s.visible;l.opacity=s.opacity;const im=new Image();im.onload=()=>{l.ctx.clearRect(0,0,W,H);l.ctx.drawImage(im,0,0,W,H);renderLayers()};im.src=s.data;return l});selected=Math.min(selected,layers.length-1);renderLayers()}
+function undo(){if(history.length<2)return;future.push(history.pop());restoreState(history[history.length-1]);setStatus('Cambio deshecho')}
+function redo(){if(!future.length)return;const s=future.pop();history.push(s);restoreState(s);setStatus('Cambio recuperado')}
+function fillAt(e){const p=coords(e),l=active(),ctx=l.ctx;let x=Math.floor(p.x),y=Math.floor(p.y);const img=ctx.getImageData(0,0,W,H),d=img.data,idx=(y*W+x)*4,target=[d[idx],d[idx+1],d[idx+2],d[idx+3]],rgb=hexRgb(color);if(target[3]===255&&target[0]===rgb[0]&&target[1]===rgb[1]&&target[2]===rgb[2])return;const stack=[[x,y]],seen=new Uint8Array(W*H);let count=0;while(stack.length&&count<250000){const [cx,cy]=stack.pop();if(cx<0||cy<0||cx>=W||cy>=H)continue;const pi=cy*W+cx;if(seen[pi])continue;seen[pi]=1;const k=pi*4;if(Math.abs(d[k]-target[0])+Math.abs(d[k+1]-target[1])+Math.abs(d[k+2]-target[2])+Math.abs(d[k+3]-target[3])>70)continue;d[k]=rgb[0];d[k+1]=rgb[1];d[k+2]=rgb[2];d[k+3]=255;count++;stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1])}ctx.putImageData(img,0,0);snapshot();setStatus('Relleno aplicado · Puedes deshacerlo')}
+function hexRgb(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]}
+function pickColor(e){const p=coords(e);for(let i=layers.length-1;i>=0;i--){const l=layers[i];if(!l.visible)continue;const d=l.ctx.getImageData(Math.floor(p.x),Math.floor(p.y),1,1).data;if(d[3]>20){color='#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join('');$('color').value=color;updateColor();return}}}
+function updateColor(){color=$('color').value;$('colorName').textContent=color.toUpperCase();if(!recent.includes(color))recent.unshift(color);recent=recent.slice(0,8);renderSwatches();setStatus('Color seleccionado')}
+function renderSwatches(){const sw=['#27364b','#d85b4b','#f2c14e','#4b8f72','#faf3dd','#8b6cc1','#f28f3b','#171717'];$('swatches').innerHTML='';sw.forEach(c=>addSwatch($('swatches'),c));$('recentColors').innerHTML='';recent.forEach(c=>addSwatch($('recentColors'),c))}
+function addSwatch(parent,c){const b=document.createElement('button');b.className='swatch';b.style.background=c;b.title=c;b.setAttribute('aria-label','Elegir '+c);b.onclick=()=>{$('color').value=c;updateColor()};parent.append(b)}
+function newProject(){projectName=$('projectName').value.trim()||'Mi dibujo';layers.forEach(l=>l.canvas.remove());layers=[makeLayer('Boceto')];selected=0;zoom=1;rotation=0;renderLayers();fitPaper();snapshot();setStatus('Nuevo dibujo · Guardado local')}
+function composite(){const c=document.createElement('canvas');c.width=W;c.height=H;const ctx=c.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);layers.forEach(l=>{if(l.visible){ctx.globalAlpha=l.opacity;ctx.drawImage(l.canvas,0,0)}});ctx.globalAlpha=1;return c}
+function saveLocal(){const state={version:1,name:projectName,width:W,height:H,layers:layers.map(l=>({name:l.name,visible:l.visible,opacity:l.opacity,data:l.canvas.toDataURL('image/png')}))};try{localStorage.setItem('forja-autosave',JSON.stringify(state));setStatus('Guardado en este dispositivo')}catch(e){setStatus('El proyecto es grande; usa Guardar proyecto')}}
+function download(name,blob){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500)}
+function saveProject(){const state={version:1,name:projectName,width:W,height:H,layers:layers.map(l=>({name:l.name,visible:l.visible,opacity:l.opacity,data:l.canvas.toDataURL('image/png')}))};download(projectName.replace(/[^\w\-]+/g,'_')+'.forja',new Blob([JSON.stringify(state)],{type:'application/json'}));saveLocal();setStatus('Proyecto editable guardado')}
+function openFile(file){if(!file)return;const reader=new FileReader();reader.onload=()=>{if(file.type.startsWith('image/')){layers.forEach(l=>l.canvas.remove());layers=[makeLayer('Imagen importada')];const im=new Image();im.onload=()=>{layers[0].ctx.drawImage(im,0,0,W,H);selected=0;renderLayers();snapshot();setStatus('Imagen abierta')};im.src=reader.result;return}try{const s=JSON.parse(reader.result);if(!s.layers)throw Error();layers.forEach(l=>l.canvas.remove());layers=s.layers.map(x=>{const l=makeLayer(x.name);l.visible=x.visible!==false;l.opacity=x.opacity??1;const im=new Image();im.onload=()=>{l.ctx.drawImage(im,0,0,W,H);renderLayers()};im.src=x.data;return l});projectName=s.name||'Mi dibujo';selected=0;renderLayers();snapshot();setStatus('Proyecto abierto')}catch(e){showDialog('No se pudo abrir','Este archivo no parece ser un proyecto Forja válido. Tu dibujo actual no se ha modificado.')}};reader.readAsText(file)}
+function showDialog(title,text){$('dialogTitle').textContent=title;$('dialogText').textContent=text;$('messageDialog').showModal()}
+document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b));setStatus('Herramienta: '+b.title)});
+/* ===== Biblioteca de pinceles, importar y crear ===== */
+let catFilter='Todos';const CATS=['Todos','Dibujo','Pintura','Efectos','Mis pinceles'];
+function syncToolButtons(){document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool==='brush'))}
+function selectBrush(id){brush=id;tool='brush';syncToolButtons();renderBrushList();setStatus('Pincel: '+getBrush(id).name)}
+function renderBrushList(){
+  const cats=$('brushCats');cats.innerHTML='';CATS.forEach(c=>{const b=document.createElement('button');b.className='chip'+(c===catFilter?' active':'');b.textContent=c;b.onclick=()=>{catFilter=c;renderBrushList()};cats.append(b)});
+  const list=$('brushList'),st=list.scrollTop;list.innerHTML='';
+  const items=builtin.concat(custom).filter(b=>catFilter==='Todos'||b.cat===catFilter);
+  if(!items.length){const p=document.createElement('p');p.className='muted';p.textContent='Aún no tienes pinceles propios. Usa ＋ Crear o ⇪ Importar.';list.append(p)}
+  items.forEach(b=>{const btn=document.createElement('button'),t=document.createElement('b'),s=document.createElement('small'),cv=mkCanvas(240,56);btn.className='brush-card'+(b.id===brush?' active':'');t.textContent=b.name;s.textContent=b.desc||'';btn.append(t,s,cv);btn.onclick=()=>selectBrush(b.id);list.append(btn);ensureTip(b).then(()=>drawPreview(cv,b))});
+  list.scrollTop=st}
+const newId=()=>'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const pc=v=>Math.round(v*100)+'%';
+const FIELDS=[
+{k:'sm',l:'Tamaño base',t:'multiplicador',min:.3,max:4,step:.05,fmt:v=>'×'+(+v).toFixed(2),basic:1},
+{k:'hardness',l:'Borde suave ↔ duro',t:'dureza',min:0,max:1,step:.01,fmt:pc,basic:1,proc:1},
+{k:'spacing',l:'Distancia entre sellos',t:'espaciado',min:.01,max:1.5,step:.01,fmt:pc,basic:1},
+{k:'flow',l:'Cuánta tinta suelta',t:'flujo',min:.02,max:1,step:.01,fmt:pc,basic:1},
+{k:'maxAlpha',l:'Transparencia máxima del trazo',t:'opacidad máx.',min:.1,max:1,step:.01,fmt:pc},
+{k:'roundness',l:'Punta redonda ↔ achatada',t:'redondez',min:.1,max:1,step:.01,fmt:pc,proc:1},
+{k:'angle',l:'Giro de la punta',t:'ángulo',min:0,max:360,step:1,fmt:v=>v+'°'},
+{k:'grain',l:'Grano de papel',t:'textura',min:0,max:1,step:.01,fmt:pc},
+{k:'scatter',l:'Esparcir sellos',t:'dispersión',min:0,max:2,step:.01,fmt:pc},
+{k:'sizeJitter',l:'Tamaños distintos',t:'variación de tamaño',min:0,max:1,step:.01,fmt:pc},
+{k:'angleJitter',l:'Giros al azar',t:'variación de ángulo',min:0,max:180,step:1,fmt:v=>v+'°'},
+{k:'pSize',l:'La presión cambia el grosor',t:'presión → tamaño',min:0,max:1,step:.01,fmt:pc},
+{k:'pFlow',l:'La presión cambia la intensidad',t:'presión → flujo',min:0,max:1,step:.01,fmt:pc}];
+function cleanBrush(r,keepId){const o={...BASE};for(const f of FIELDS){const v=+r[f.k];if(Number.isFinite(v))o[f.k]=Math.min(f.max,Math.max(f.min,v))}
+  o.name=String(r.name||'Pincel importado').slice(0,40);o.desc=String(r.desc||'').slice(0,80);o.shape=['round','square','star','image'].includes(r.shape)?r.shape:'round';
+  o.follow=!!r.follow;o.tipInvert=!!r.tipInvert;o.tipSrc=(typeof r.tipSrc==='string'&&r.tipSrc.startsWith('data:image/')&&r.tipSrc.length<600000)?r.tipSrc:null;
+  if(o.shape==='image'&&!o.tipSrc)o.shape='round';o.cat='Mis pinceles';o.custom=true;o.id=(keepId&&typeof r.id==='string'&&r.id)?r.id.slice(0,40):newId();return o}
+function persistBrushes(){try{localStorage.setItem('forja-brushes',JSON.stringify(custom))}catch(e){setStatus('No se pudieron guardar tus pinceles (poco espacio). Exporta cada uno como archivo.')}}
+const readFile=(f,mode)=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;mode==='text'?r.readAsText(f):r.readAsDataURL(f)});
+const loadImg=src=>new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=src});
+function normalizeImage(im){const s=Math.min(1,TIP/Math.max(im.width,im.height)),c=mkCanvas(Math.max(1,Math.round(im.width*s)),Math.max(1,Math.round(im.height*s)));c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/png')}
+/* editor */
+let ed=null,edId=null;
+function buildEditorFields(){
+  FIELDS.forEach(f=>{const d=document.createElement('div');d.className='control';d.dataset.k=f.k;d.innerHTML='<label>'+f.l+' <span class="muted">('+f.t+')</span> <strong data-v></strong></label>';const i=document.createElement('input');i.type='range';i.min=f.min;i.max=f.max;i.step=f.step;i.id='bf_'+f.k;i.oninput=()=>{ed[f.k]=+i.value;d.querySelector('[data-v]').textContent=f.fmt(+i.value);updateEdPreview()};d.append(i);(f.basic?$('bBasic'):$('bAdv')).append(d)});
+  const c=document.createElement('label');c.className='check';c.innerHTML='<input type="checkbox" id="bFollow"> La punta gira siguiendo la dirección del trazo';$('bAdv').append(c);
+  $('bFollow').onchange=e=>{ed.follow=e.target.checked;updateEdPreview()}}
+function syncEditor(){
+  $('bName').value=ed.name;$('bShape').value=ed.shape;$('bInvert').checked=!!ed.tipInvert;$('bFollow').checked=!!ed.follow;
+  FIELDS.forEach(f=>{const i=$('bf_'+f.k);i.value=ed[f.k];i.parentNode.querySelector('[data-v]').textContent=f.fmt(+ed[f.k]);if(f.proc)i.parentNode.hidden=ed.shape==='image'});
+  $('bImageBox').hidden=ed.shape!=='image';$('bDelete').hidden=!edId;updateEdPreview()}
+function updateEdPreview(){ensureTip(ed).then(()=>drawPreview($('brushPreview'),ed))}
+function openEditor(def){edId=def.custom?def.id:null;ed={...def};if(!def.custom)ed.name='Mi '+def.name.toLowerCase();$('brushDlgTitle').textContent=edId?'Editar pincel':'Crear pincel';$('bMsg').textContent='Una imagen con transparencia usa su forma. Una imagen sin transparencia usa lo oscuro como tinta y lo claro como vacío.';syncEditor();$('brushDialog').showModal()}
+$('bName').oninput=e=>{ed.name=e.target.value};
+$('bShape').onchange=e=>{ed.shape=e.target.value;syncEditor()};
+$('bInvert').onchange=e=>{ed.tipInvert=e.target.checked;updateEdPreview()};
+$('bPickImage').onclick=()=>$('bImgFile').click();
+$('bImgFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{ed.tipSrc=normalizeImage(await loadImg(await readFile(f)));ed.shape='image';if(!$('bName').value.trim()||/^Mi /.test($('bName').value))ed.name=f.name.replace(/\.[^.]+$/,'').slice(0,40);syncEditor()}catch(err){$('bMsg').textContent='No se pudo leer esa imagen.'}};
+$('bFromLayer').onclick=()=>{const l=active(),d=l.ctx.getImageData(0,0,W,H).data;let x0=W,y0=H,x1=-1,y1=-1;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(d[(y*W+x)*4+3]>8){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+  if(x1<0){$('bMsg').textContent='Tu capa actual está vacía. Dibuja una forma en ella y vuelve a intentarlo.';return}
+  const w=x1-x0+1,h=y1-y0+1,s=Math.max(w,h),c=mkCanvas(s,s);c.getContext('2d').drawImage(l.canvas,x0,y0,w,h,Math.round((s-w)/2),Math.round((s-h)/2),w,h);
+  ed.tipSrc=normalizeImage(c);ed.shape='image';ed.tipInvert=false;$('bMsg').textContent='Listo: la forma de tu capa es ahora la punta.';syncEditor()};
+$('bCancel').onclick=()=>$('brushDialog').close();
+$('bSave').onclick=()=>{ed.name=$('bName').value.trim()||'Mi pincel';ed.id=edId||undefined;const b=cleanBrush(ed,true);
+  if(edId)custom=custom.map(x=>x.id===edId?b:x);else custom.push(b);
+  persistBrushes();$('brushDialog').close();catFilter='Mis pinceles';ensureTip(b).then(()=>{selectBrush(b.id)})};
+$('bExport').onclick=()=>{const b=cleanBrush({...ed,name:$('bName').value.trim()||'Mi pincel'});const {id,custom:c,cat,...rest}=b;download(b.name.replace(/[^\w\-]+/g,'_')+'.forjabrush',new Blob([JSON.stringify({forjaBrush:1,brush:rest})],{type:'application/json'}))};
+$('bDelete').onclick=()=>{if(!confirm('¿Eliminar este pincel? No se puede deshacer; si quieres conservarlo, expórtalo antes.'))return;custom=custom.filter(x=>x.id!==edId);if(brush===edId)brush='pencil';persistBrushes();$('brushDialog').close();renderBrushList()};
+$('newBrushBtn').onclick=()=>openEditor({...BASE,id:null,name:'Mi pincel',custom:false});
+$('editBrushBtn').onclick=()=>openEditor(getBrush(brush));
+$('importBrushBtn').onclick=()=>$('brushFile').click();
+$('brushFile').onchange=async e=>{const files=[...e.target.files];e.target.value='';const added=[];
+  for(const f of files){try{
+    if(/\.abr$/i.test(f.name)){showDialog('Archivos .abr','Los pinceles .abr de Photoshop todavía no se pueden leer. Si tienes la forma de la punta como imagen (PNG), impórtala aquí y se convierte en pincel.');continue}
+    if(f.type.startsWith('image/')){const src=normalizeImage(await loadImg(await readFile(f)));const def={...BASE,id:null,name:f.name.replace(/\.[^.]+$/,'').slice(0,40),shape:'image',tipSrc:src,spacing:.15,flow:.8,custom:false};
+      if(files.length===1){openEditor(def);ed.name=def.name;syncEditor();return}added.push(cleanBrush(def));continue}
+    const j=JSON.parse(await readFile(f,'text')),list=j.forjaBrush?[j.brush]:Array.isArray(j.forjaBrushes)?j.forjaBrushes:null;if(!list)throw Error();list.slice(0,50).forEach(r=>added.push(cleanBrush(r)))
+  }catch(err){showDialog('No se pudo importar','"'+f.name+'" no parece una imagen ni un pincel .forjabrush válido. Tus pinceles no se modificaron.')}}
+  if(!added.length)return;custom.push(...added);persistBrushes();await Promise.all(added.map(ensureTip));catFilter='Mis pinceles';selectBrush(added[added.length-1].id);setStatus(added.length+' pincel(es) importado(s)')};
+/* zona de prueba: no toca el dibujo */
+const pad=$('testPad'),pctx=pad.getContext('2d');let padStroker=null;
+const padPt=(e,r)=>({x:(e.clientX-r.left)*pad.width/r.width,y:(e.clientY-r.top)*pad.height/r.height,p:pressureOf(e)});
+pad.onpointerdown=e=>{pad.setPointerCapture(e.pointerId);const b=getBrush(brush),r=pad.getBoundingClientRect();padStroker=makeStroker(b,{ctx:pctx,color,size:size*(paper.offsetWidth*zoom/W)*(pad.width/r.width),alphaMul:opacity*b.maxAlpha,erase:false,mirror:0});padStroker.add(padPt(e,r))};
+pad.onpointermove=e=>{if(!padStroker)return;const r=pad.getBoundingClientRect();for(const ev of (e.getCoalescedEvents?e.getCoalescedEvents():[e]))padStroker.add(padPt(ev,r))};
+pad.onpointerup=pad.onpointercancel=()=>{padStroker=null};
+$('padClear').onclick=()=>pctx.clearRect(0,0,pad.width,pad.height);
+function initBrushes(){try{custom=JSON.parse(localStorage.getItem('forja-brushes')||'[]').map(r=>cleanBrush(r,true))}catch(e){custom=[]}
+  buildEditorFields();renderBrushList();Promise.all(custom.map(ensureTip)).then(renderBrushList)}
+$('size').oninput=e=>{size=+e.target.value;$('sizeValue').textContent=size};$('opacity').oninput=e=>{opacity=+e.target.value/100;$('opacityValue').textContent=e.target.value+'%'};$('color').oninput=updateColor;
+$('undoBtn').onclick=undo;$('redoBtn').onclick=redo;$('zoomIn').onclick=()=>{zoom=Math.min(2.5,zoom+.1);fitPaper()};$('zoomOut').onclick=()=>{zoom=Math.max(.4,zoom-.1);fitPaper()};$('fitBtn').onclick=()=>{zoom=1;rotation=0;fitPaper()};$('rotateBtn').onclick=()=>{rotation=(rotation+15)%360;fitPaper()};$('gridBtn').onclick=()=>{grid=!grid;paper.style.backgroundImage=grid?'linear-gradient(#9993 1px,transparent 1px),linear-gradient(90deg,#9993 1px,transparent 1px)':'none';paper.style.backgroundSize='32px 32px';$('gridBtn').textContent=grid?'Quitar cuadrícula':'Cuadrícula'};$('symBtn').onclick=()=>{symmetry=!symmetry;$('symBtn').textContent=symmetry?'Simetría: activa':'Simetría'};
+$('addLayer').onclick=()=>{layers.splice(selected+1,0,makeLayer(['Boceto','Colores','Sombras','Brillos'].find(n=>!layers.some(l=>l.name===n))||'Capa nueva'));selected++;renderLayers();snapshot();setStatus('Capa creada')};
+$('toggleLayer').onclick=()=>{active().visible=!active().visible;renderLayers();snapshot()};$('renameLayer').onclick=()=>{const n=prompt('Nombre de la capa:',active().name);if(n!==null){active().name=n.trim()||active().name;renderLayers();snapshot()}};$('deleteLayer').onclick=()=>{if(layers.length===1){showDialog('La última capa se queda','Un dibujo necesita al menos una capa. Puedes borrar su contenido con la goma.');return}if(confirm('¿Eliminar esta capa? Esta acción se puede deshacer.')){active().canvas.remove();layers.splice(selected,1);selected=Math.max(0,selected-1);renderLayers();snapshot()}};
+$('duplicateLayer').onclick=()=>{const src=active(),l=makeLayer(src.name+' copia');l.ctx.drawImage(src.canvas,0,0);l.visible=src.visible;l.opacity=src.opacity;layers.splice(selected+1,0,l);selected++;renderLayers();snapshot()};$('layerUp').onclick=()=>{if(selected<layers.length-1){[layers[selected],layers[selected+1]]=[layers[selected+1],layers[selected]];selected++;renderLayers();snapshot()}};$('layerDown').onclick=()=>{if(selected>0){[layers[selected],layers[selected-1]]=[layers[selected-1],layers[selected]];selected--;renderLayers();snapshot()}};$('layerOpacity').oninput=e=>{active().opacity=+e.target.value/100;$('layerOpacityValue').textContent=e.target.value+'%';renderLayers()};$('layerOpacity').onchange=()=>snapshot();
+$('saveBtn').onclick=saveProject;$('exportBtn').onclick=()=>composite().toBlob(b=>download(projectName.replace(/[^\w\-]+/g,'_')+'.png',b),'image/png');$('openBtn').onclick=()=>$('fileOpen').click();$('fileOpen').onchange=e=>openFile(e.target.files[0]);$('newBtn').onclick=()=>$('newDialog').showModal();$('newCancel').onclick=()=>$('newDialog').close();$('newConfirm').onclick=()=>{$('newDialog').close();newProject()};
+$('helpBtn').onclick=()=>showDialog('Ayuda breve','1. Elige un pincel y un color. 2. Dibuja en el papel. 3. Usa Deshacer si quieres probar otra cosa. 4. Añade una capa para separar boceto, colores y sombras. Guarda una copia editable con Guardar y una imagen para compartir con Exportar PNG.');
+$('layersFocus').onclick=()=>$('layersSection').scrollIntoView({behavior:'smooth',block:'start'});$('dialogCancel').onclick=()=>$('messageDialog').close();$('dialogOK').onclick=()=>$('messageDialog').close();$('testBrush').onclick=()=>{$('padWrap').open=true;$('padWrap').scrollIntoView({block:'nearest'})};
+const sparks = [
+{cat:'Personajes',title:'Diseña un personaje a partir de una silueta',desc:'Empieza con una mancha o una forma sencilla. Descubre qué criatura podría esconderse ahí.'},
+{cat:'Color',title:'Cuenta una emoción con tres colores',desc:'Elige tres tonos y crea una imagen que transmita calma, misterio, energía o cualquier emoción que tú decidas.'},
+{cat:'Texturas',title:'Haz que se pueda casi tocar',desc:'Prueba trazos para representar metal, tela, pelo, vidrio, madera o una textura inventada.'},
+{cat:'Mundos',title:'Dibuja una ventana a otro lugar',desc:'Puede ser una ciudad flotante, un bosque diminuto, una estación espacial o un sitio que solo tú conozcas.'},
+{cat:'Luz y sombra',title:'Cambia la hora del día sin redibujar todo',desc:'Crea otra capa para probar una iluminación distinta. Conserva el original si quieres comparar.'},
+{cat:'Experimentación',title:'Usa un pincel de una forma inesperada',desc:'Prueba un pincel de tinta para pintar una nube, o uno suave para diseñar una criatura de piedra.'},
+{cat:'Observación',title:'Haz extraordinario un objeto cotidiano',desc:'Elige un objeto cercano y conviértelo en reliquia, artefacto, personaje o máquina fantástica.'},
+{cat:'Composición',title:'Cuenta una historia en una sola imagen',desc:'Piensa qué ocurrió justo antes y qué podría ocurrir después. No hace falta escribir ni explicar nada.'}
+];
+let sparkIndex = Math.floor(Math.random()*sparks.length);
+function showSpark(){const s=sparks[sparkIndex];$('sparkCategory').textContent=s.cat;$('sparkTitle').textContent=s.title;$('sparkDesc').textContent=s.desc}
+$('sparkBtn').onclick=()=>{$('sparkDialog').showModal();showSpark()};
+$('anotherSpark').onclick=()=>{let n=sparkIndex;while(n===sparkIndex)n=Math.floor(Math.random()*sparks.length);sparkIndex=n;showSpark()};
+$('sparkClose').onclick=()=>$('sparkDialog').close();
+$('useSpark').onclick=()=>{const s=sparks[sparkIndex];$('sparkDialog').close();$('projectName').value=s.title;$('newDialog').showModal()};
+$('advancedBtn').onclick=()=>$('advancedDialog').showModal();$('advancedClose').onclick=()=>$('advancedDialog').close();$('stabilizer').oninput=e=>{stabilizer=+e.target.value;$('stabilizerValue').textContent=e.target.value+'%'};
+window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();redo()}else if(e.key==='['){size=Math.max(1,size-1);$('size').value=size;$('sizeValue').textContent=size}else if(e.key===']'){size=Math.min(60,size+1);$('size').value=size;$('sizeValue').textContent=size}});
+let autosaveTimer;window.addEventListener('beforeunload',()=>{try{saveLocal()}catch(e){}});setInterval(()=>{if(drawing)return;try{saveLocal()}catch(e){}},15000);
+const saved=localStorage.getItem('forja-autosave');if(saved){try{const s=JSON.parse(saved);if(s.layers?.length){layers.forEach(l=>l.canvas.remove());layers=s.layers.map(x=>{const l=makeLayer(x.name);l.visible=x.visible!==false;l.opacity=x.opacity??1;const im=new Image();im.onload=()=>{l.ctx.drawImage(im,0,0,W,H);renderLayers()};im.src=x.data;return l});projectName=s.name||projectName;selected=0;renderLayers();snapshot();setStatus('Proyecto local recuperado')}else init()}catch(e){init()}}else init();
+renderSwatches();initBrushes();window.addEventListener('resize',fitPaper);
+})();
+</script>
+</body>
+</html>
